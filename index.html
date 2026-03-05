@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Georgia Auto Lease Calculator</title>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-light: #3b82f6;
+            --primary-bg: #eff6ff;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --input-bg: #f8fafc;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1320px; margin: 0 auto; padding: 24px 16px; }
+        header { text-align: center; margin-bottom: 32px; }
+        header h1 { font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+        header p { color: var(--text-muted); font-size: 14px; }
+        .calculator { display: grid; grid-template-columns: 1fr 440px; gap: 24px; align-items: start; }
+        .card {
+            background: var(--card); border-radius: var(--radius);
+            padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 16px; font-weight: 600; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .badge {
+            font-size: 11px; font-weight: 600; padding: 2px 8px;
+            border-radius: 99px; background: var(--primary-bg); color: var(--primary);
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row:last-child { margin-bottom: 0; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+        .form-group input, .form-group select {
+            padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 15px; background: var(--input-bg); color: var(--text);
+            transition: border-color 0.15s, box-shadow 0.15s; outline: none; font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: #fff;
+        }
+        .hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .hint.warn { color: #b45309; }
+        .input-wrap { position: relative; }
+        .input-wrap .prefix {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 15px; pointer-events: none;
+        }
+        .input-wrap .prefix ~ input { padding-left: 24px; }
+        .input-wrap .suffix {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 13px; pointer-events: none;
+        }
+        .input-wrap .suffix ~ input,
+        .input-wrap input:has(~ .suffix) { padding-right: 34px; }
+        /* fee table */
+        .fee-table { width: 100%; border-collapse: collapse; }
+        .fee-table th {
+            text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px 8px;
+        }
+        .fee-table td { padding: 3px 4px; }
+        .fee-table input, .fee-table select {
+            padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 6px;
+            font-size: 14px; background: var(--input-bg); color: var(--text);
+            width: 100%; outline: none; font-family: inherit;
+        }
+        .fee-table input:focus, .fee-table select:focus {
+            border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .fee-table .col-amount { width: 120px; }
+        .fee-table .col-handle { width: 165px; }
+        /* results */
+        .results { position: sticky; top: 24px; }
+        .results-card {
+            background: var(--card); border-radius: var(--radius);
+            box-shadow: var(--shadow-md); overflow: hidden;
+        }
+        .results-header {
+            background: linear-gradient(135deg, var(--primary), #1e3a8a);
+            color: white; padding: 24px; text-align: center;
+        }
+        .results-header .label { font-size: 13px; opacity: 0.85; margin-bottom: 2px; }
+        .results-header .amount { font-size: 44px; font-weight: 700; letter-spacing: -1px; }
+        .results-header .sublabel { font-size: 12px; opacity: 0.65; margin-top: 2px; }
+        .results-body { padding: 20px 24px; }
+        .results-section { margin-bottom: 18px; }
+        .results-section:last-child { margin-bottom: 0; }
+        .section-title {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--text-muted);
+            margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+        }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 13.5px; }
+        .row .lbl { color: var(--text-muted); }
+        .row .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .row.total { padding-top: 6px; margin-top: 4px; border-top: 1px dashed var(--border); font-size: 14px; }
+        .row.total .lbl { color: var(--text); font-weight: 600; }
+        .row.total .val { color: var(--primary); }
+        .row.indent .lbl { padding-left: 12px; font-size: 12.5px; }
+        .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+        .metric {
+            background: var(--input-bg); border-radius: 8px; padding: 10px; text-align: center;
+        }
+        .metric .mv { font-size: 17px; font-weight: 700; color: var(--primary); }
+        .metric .ml { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+        .ga-note {
+            background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px;
+            padding: 12px 16px; font-size: 12.5px; color: #92400e; line-height: 1.5;
+        }
+        .ga-note strong { display: block; margin-bottom: 2px; font-size: 13px; }
+        footer {
+            text-align: center; margin-top: 32px; padding: 16px;
+            color: var(--text-muted); font-size: 12px;
+        }
+        @media (max-width: 960px) {
+            .calculator { grid-template-columns: 1fr; }
+            .results { position: static; }
+        }
+        @media (max-width: 600px) {
+            .form-row, .form-row.triple { grid-template-columns: 1fr; }
+            .container { padding: 16px 12px; }
+            .results-header .amount { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Georgia Auto Lease Calculator</h1>
+        <p>Accurate lease payment calculator with Georgia TAVT (Title Ad Valorem Tax)</p>
+    </header>
+
+    <main class="calculator">
+        <div class="inputs">
+            <!-- Vehicle Pricing -->
+            <div class="card">
+                <div class="card-title">Vehicle Pricing</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>MSRP</label>
+                        <div class="input-wrap">
+                            <span class="prefix">$</span>
+                            <input type="number" id="msrp" value="45000" step="100" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dealer Discount</label>
+                        <div class="input-wrap">
+                            <input type="number" id="discount" value="5" step="0.5" min="0" max="100">
+                            <span class="suffix">%</span>
+                        </div>
+                        <span class="hint" id="discountHint">= -$2,250</span>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>Manufacturer Incentives / Rebates</label>
+                        <div class="input-wrap">
+                            <span class="prefix">$</span>
+                            <input type="number" id="incentives" value="0" step="100" min="0">
+                        </div>
+                        <span class="hint">Taxable incentives applied before tax calculation</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lease Terms -->
+            <div class="card">
+                <div class="card-title">Lease Terms</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Lease Duration</label>
+                        <select id="term">
+                            <option value="24">24 months</option>
+                            <option value="27">27 months</option>
+                            <option value="30">30 months</option>
+                            <option value="33">33 months</option>
+                            <option value="36" selected>36 months</option>
+                            <option value="39">39 months</option>
+                            <option value="42">42 months</option>
+                            <option value="48">48 months</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Miles</label>
+                        <select id="miles">
+                            <option value="7500">7,500 mi/yr</option>
+                            <option value="10000">10,000 mi/yr</option>
+                            <option value="12000" selected>12,000 mi/yr</option>
+                            <option value="15000">15,000 mi/yr</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Residual Value</label>
+                        <div class="input-wrap">
+                            <input type="number" id="residual" value="55" step="0.5" min="0" max="100">
+                            <span class="suffix">%</span>
+                        </div>
+                        <span class="hint" id="residualHint">= $24,750 of MSRP</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Money Factor</label>
+                        <input type="text" id="moneyFactor" value="0.00125">
+                        <span class="hint" id="mfHint">= 3.00% APR</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Georgia Tax -->
+            <div class="card">
+                <div class="card-title">Georgia Tax <span class="badge">TAVT</span></div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>Title Ad Valorem Tax (TAVT) Rate</label>
+                        <div class="input-wrap">
+                            <input type="number" id="tavtRate" value="6.6" step="0.1" min="0" max="20">
+                            <span class="suffix">%</span>
+                        </div>
+                        <span class="hint">One-time tax paid at lease signing (current GA rate: 6.6%)</span>
+                    </div>
+                </div>
+                <div class="ga-note" style="margin-top: 14px;">
+                    <strong>How Georgia TAVT Works for Leases</strong>
+                    Georgia replaced annual vehicle property tax with a one-time Title Ad Valorem Tax.
+                    For leases, TAVT is calculated on the total of your base monthly lease payments and paid
+                    upfront at signing. There is <em>no additional monthly sales tax</em> on your payment.
+                </div>
+            </div>
+
+            <!-- Fees & Charges -->
+            <div class="card">
+                <div class="card-title">Fees & Charges</div>
+                <table class="fee-table">
+                    <thead>
+                        <tr><th>Fee Name</th><th>Amount</th><th>Handling</th></tr>
+                    </thead>
+                    <tbody id="feeBody">
+                        <tr>
+                            <td><input type="text" value="Doc / Dealer Fee" class="fn"></td>
+                            <td class="col-amount"><input type="number" value="799" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront" selected>Pay Upfront</option>
+                                <option value="cap">Roll into Lease</option>
+                                <option value="end">Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="Acquisition Fee" class="fn"></td>
+                            <td class="col-amount"><input type="number" value="695" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront">Pay Upfront</option>
+                                <option value="cap" selected>Roll into Lease</option>
+                                <option value="end">Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="Disposition Fee" class="fn"></td>
+                            <td class="col-amount"><input type="number" value="395" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront">Pay Upfront</option>
+                                <option value="cap">Roll into Lease</option>
+                                <option value="end" selected>Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="Registration / Tag" class="fn"></td>
+                            <td class="col-amount"><input type="number" value="20" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront" selected>Pay Upfront</option>
+                                <option value="cap">Roll into Lease</option>
+                                <option value="end">Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="" placeholder="Custom fee name..." class="fn"></td>
+                            <td class="col-amount"><input type="number" value="0" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront" selected>Pay Upfront</option>
+                                <option value="cap">Roll into Lease</option>
+                                <option value="end">Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text" value="" placeholder="Custom fee name..." class="fn"></td>
+                            <td class="col-amount"><input type="number" value="0" min="0" class="fv"></td>
+                            <td class="col-handle"><select class="fh">
+                                <option value="upfront" selected>Pay Upfront</option>
+                                <option value="cap">Roll into Lease</option>
+                                <option value="end">Due at Lease End</option>
+                            </select></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="hint" style="margin-top: 10px;">
+                    <strong>Roll into Lease</strong> = capitalized into monthly payment &nbsp;|&nbsp;
+                    <strong>Pay Upfront</strong> = due at signing &nbsp;|&nbsp;
+                    <strong>Due at Lease End</strong> = paid when returning vehicle
+                </p>
+            </div>
+
+            <!-- Down Payment -->
+            <div class="card">
+                <div class="card-title">Down Payment / Cap Cost Reduction</div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>Additional Cash Down</label>
+                        <div class="input-wrap">
+                            <span class="prefix">$</span>
+                            <input type="number" id="downPayment" value="0" step="100" min="0">
+                        </div>
+                        <span class="hint">Reduces your capitalized cost and lowers monthly payment</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results">
+            <div class="results-card">
+                <div class="results-header">
+                    <div class="label">Monthly Payment</div>
+                    <div class="amount" id="rMonthly">$0.00</div>
+                    <div class="sublabel">No monthly sales tax in Georgia</div>
+                </div>
+                <div class="results-body">
+                    <!-- Payment Breakdown -->
+                    <div class="results-section">
+                        <div class="section-title">Payment Breakdown</div>
+                        <div class="row"><span class="lbl">Depreciation</span><span class="val" id="rDep">$0.00</span></div>
+                        <div class="row"><span class="lbl">Rent Charge (Finance)</span><span class="val" id="rRent">$0.00</span></div>
+                    </div>
+
+                    <!-- Cap Cost -->
+                    <div class="results-section">
+                        <div class="section-title">Capitalized Cost Summary</div>
+                        <div class="row"><span class="lbl">MSRP</span><span class="val" id="rMSRP">$0</span></div>
+                        <div class="row indent"><span class="lbl">Dealer Discount</span><span class="val" id="rDisc">-$0</span></div>
+                        <div class="row indent"><span class="lbl">Incentives / Rebates</span><span class="val" id="rInc">-$0</span></div>
+                        <div class="row" style="font-weight:500;"><span class="lbl">Selling Price</span><span class="val" id="rSell">$0</span></div>
+                        <div class="row indent"><span class="lbl">+ Capitalized Fees</span><span class="val" id="rCapFees">$0</span></div>
+                        <div class="row indent"><span class="lbl">- Down Payment</span><span class="val" id="rDown2">$0</span></div>
+                        <div class="row total"><span class="lbl">Net Cap Cost</span><span class="val" id="rNetCap">$0</span></div>
+                        <div class="row" style="margin-top:4px;"><span class="lbl">Residual Value</span><span class="val" id="rResid">$0</span></div>
+                    </div>
+
+                    <!-- Due at Signing -->
+                    <div class="results-section">
+                        <div class="section-title">Due at Signing</div>
+                        <div class="row"><span class="lbl">First Month's Payment</span><span class="val" id="rFirst">$0</span></div>
+                        <div class="row"><span class="lbl">Down Payment</span><span class="val" id="rDown">$0</span></div>
+                        <div class="row"><span class="lbl">Georgia TAVT</span><span class="val" id="rTAVT">$0</span></div>
+                        <div class="row"><span class="lbl">Upfront Fees</span><span class="val" id="rUpFees">$0</span></div>
+                        <div class="row total"><span class="lbl">Total Due at Signing</span><span class="val" id="rDAS">$0</span></div>
+                    </div>
+
+                    <!-- Total Lease Cost -->
+                    <div class="results-section">
+                        <div class="section-title">Total Lease Cost</div>
+                        <div class="row"><span class="lbl" id="rTotMonLbl">36 Monthly Payments</span><span class="val" id="rTotMon">$0</span></div>
+                        <div class="row"><span class="lbl">Down Payment</span><span class="val" id="rTotDown">$0</span></div>
+                        <div class="row"><span class="lbl">Georgia TAVT</span><span class="val" id="rTotTAVT">$0</span></div>
+                        <div class="row"><span class="lbl">Upfront Fees</span><span class="val" id="rTotUpFees">$0</span></div>
+                        <div class="row"><span class="lbl">Lease-End Fees</span><span class="val" id="rTotEndFees">$0</span></div>
+                        <div class="row total"><span class="lbl">Total Cost of Lease</span><span class="val" id="rTotCost">$0</span></div>
+                    </div>
+
+                    <!-- Key Metrics -->
+                    <div class="results-section">
+                        <div class="section-title">Key Metrics</div>
+                        <div class="metrics">
+                            <div class="metric"><div class="mv" id="rAPR">0%</div><div class="ml">APR Equivalent</div></div>
+                            <div class="metric"><div class="mv" id="rCPM">$0.00</div><div class="ml">Cost per Mile</div></div>
+                            <div class="metric"><div class="mv" id="rFinCh">$0</div><div class="ml">Total Rent Charges</div></div>
+                            <div class="metric"><div class="mv" id="rEffMo">$0</div><div class="ml">Effective Monthly</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        This calculator is for estimation purposes only. Verify all figures with your dealer.
+        Georgia TAVT rates and regulations are subject to change.
+    </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+const fmtW = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+
+function calculate() {
+    const msrp = parseFloat($('msrp').value) || 0;
+    const discPct = parseFloat($('discount').value) || 0;
+    const incentives = parseFloat($('incentives').value) || 0;
+    const term = parseInt($('term').value) || 36;
+    const miles = parseInt($('miles').value) || 12000;
+    const residPct = parseFloat($('residual').value) || 0;
+    const mf = parseFloat($('moneyFactor').value) || 0;
+    const tavtRate = parseFloat($('tavtRate').value) || 0;
+    const downPmt = parseFloat($('downPayment').value) || 0;
+
+    // Vehicle pricing
+    const discAmt = msrp * (discPct / 100);
+    const sellingPrice = Math.max(msrp - discAmt - incentives, 0);
+
+    // Fees
+    let capFees = 0, upFees = 0, endFees = 0;
+    document.querySelectorAll('#feeBody tr').forEach(row => {
+        const amt = parseFloat(row.querySelector('.fv').value) || 0;
+        const handling = row.querySelector('.fh').value;
+        if (handling === 'cap') capFees += amt;
+        else if (handling === 'upfront') upFees += amt;
+        else endFees += amt;
+    });
+
+    // Cap cost
+    const grossCap = sellingPrice + capFees;
+    const netCap = Math.max(grossCap - downPmt, 0);
+    const residVal = msrp * (residPct / 100);
+
+    // Monthly calculation
+    const monthlyDep = term > 0 ? (netCap - residVal) / term : 0;
+    const monthlyRent = (netCap + residVal) * mf;
+    const baseMonthly = monthlyDep + monthlyRent;
+
+    // Georgia TAVT on total base payments
+    const totalBase = baseMonthly * term;
+    const tavt = totalBase * (tavtRate / 100);
+
+    // Due at signing
+    const dueAtSigning = baseMonthly + downPmt + tavt + upFees;
+
+    // Total cost
+    const totalCost = totalBase + downPmt + tavt + upFees + endFees;
+
+    // Metrics
+    const apr = mf * 2400;
+    const totalMiles = miles * (term / 12);
+    const costPerMile = totalMiles > 0 ? totalCost / totalMiles : 0;
+    const totalRentCharges = monthlyRent * term;
+    const effectiveMonthly = term > 0 ? totalCost / term : 0;
+
+    // Update hints
+    $('discountHint').textContent = `= -${fmt(discAmt)}`;
+    $('residualHint').textContent = `= ${fmt(residVal)} of MSRP`;
+    $('mfHint').textContent = `= ${apr.toFixed(2)}% APR`;
+    if (mf > 0.01) {
+        $('mfHint').textContent += ' (check value!)';
+        $('mfHint').className = 'hint warn';
+    } else {
+        $('mfHint').className = 'hint';
+    }
+
+    // Update results
+    $('rMonthly').textContent = fmt(baseMonthly);
+    $('rDep').textContent = fmt(monthlyDep);
+    $('rRent').textContent = fmt(monthlyRent);
+
+    // Cap cost summary
+    $('rMSRP').textContent = fmtW(msrp);
+    $('rDisc').textContent = '-' + fmt(discAmt);
+    $('rInc').textContent = '-' + fmt(incentives);
+    $('rSell').textContent = fmt(sellingPrice);
+    $('rCapFees').textContent = '+' + fmt(capFees);
+    $('rDown2').textContent = '-' + fmt(downPmt);
+    $('rNetCap').textContent = fmt(netCap);
+    $('rResid').textContent = fmt(residVal);
+
+    // Due at signing
+    $('rFirst').textContent = fmt(baseMonthly);
+    $('rDown').textContent = fmt(downPmt);
+    $('rTAVT').textContent = fmt(tavt);
+    $('rUpFees').textContent = fmt(upFees);
+    $('rDAS').textContent = fmt(dueAtSigning);
+
+    // Total cost
+    $('rTotMonLbl').textContent = `${term} Monthly Payments`;
+    $('rTotMon').textContent = fmt(totalBase);
+    $('rTotDown').textContent = fmt(downPmt);
+    $('rTotTAVT').textContent = fmt(tavt);
+    $('rTotUpFees').textContent = fmt(upFees);
+    $('rTotEndFees').textContent = fmt(endFees);
+    $('rTotCost').textContent = fmt(totalCost);
+
+    // Metrics
+    $('rAPR').textContent = apr.toFixed(2) + '%';
+    $('rCPM').textContent = '$' + costPerMile.toFixed(3);
+    $('rFinCh').textContent = fmtW(totalRentCharges);
+    $('rEffMo').textContent = fmtW(effectiveMonthly);
+}
+
+// Attach event listeners to all inputs and selects
+document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', calculate);
+    el.addEventListener('change', calculate);
+});
+
+// Initial calculation
+calculate();
+</script>
+</body>
+</html>
