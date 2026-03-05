@@ -233,17 +233,19 @@
                     <div class="form-group">
                         <label>Title Ad Valorem Tax (TAVT) Rate</label>
                         <div class="input-wrap">
-                            <input type="number" id="tavtRate" value="6.6" step="0.1" min="0" max="20">
+                            <input type="number" id="tavtRate" value="7" step="0.1" min="0" max="20">
                             <span class="suffix">%</span>
                         </div>
-                        <span class="hint">One-time tax paid at lease signing (current GA rate: 6.6%)</span>
+                        <span class="hint">One-time tax paid at lease signing (current GA rate: 7% as of July 2023)</span>
                     </div>
                 </div>
                 <div class="ga-note" style="margin-top: 14px;">
-                    <strong>How Georgia TAVT Works for Leases</strong>
-                    Georgia replaced annual vehicle property tax with a one-time Title Ad Valorem Tax.
-                    For leases, TAVT is calculated on the total of your base monthly lease payments and paid
-                    upfront at signing. There is <em>no additional monthly sales tax</em> on your payment.
+                    <strong>How Georgia TAVT Works for Leases (HB 63, eff. Jan 2022)</strong>
+                    Georgia charges a one-time TAVT instead of annual vehicle property tax. For leases,
+                    TAVT is calculated on the <em>depreciation amount plus any capitalized fees</em>
+                    (Adjusted Cap Cost &minus; Residual Value). The rent charge (finance fee) is
+                    <strong>excluded</strong> from the tax base. There is <em>no additional monthly
+                    sales tax</em> on your payment. Down payment does not affect TAVT.
                 </div>
             </div>
 
@@ -368,7 +370,7 @@
                         <div class="section-title">Due at Signing</div>
                         <div class="row"><span class="lbl">First Month's Payment</span><span class="val" id="rFirst">$0</span></div>
                         <div class="row"><span class="lbl">Down Payment</span><span class="val" id="rDown">$0</span></div>
-                        <div class="row"><span class="lbl">Georgia TAVT</span><span class="val" id="rTAVT">$0</span></div>
+                        <div class="row"><span class="lbl" id="rTAVTlbl">Georgia TAVT</span><span class="val" id="rTAVT">$0</span></div>
                         <div class="row"><span class="lbl">Upfront Fees</span><span class="val" id="rUpFees">$0</span></div>
                         <div class="row total"><span class="lbl">Total Due at Signing</span><span class="val" id="rDAS">$0</span></div>
                     </div>
@@ -445,9 +447,13 @@ function calculate() {
     const monthlyRent = (netCap + residVal) * mf;
     const baseMonthly = monthlyDep + monthlyRent;
 
-    // Georgia TAVT on total base payments
+    // Georgia TAVT (HB 63, eff. Jan 2022)
+    // TAVT = Rate × (Adjusted Cap Cost − Residual Value)
+    // Adjusted Cap Cost = Selling Price + Capitalized Fees (before down payment)
+    // Rent charge is EXCLUDED. Down payment cancels out per Reg M formula.
     const totalBase = baseMonthly * term;
-    const tavt = totalBase * (tavtRate / 100);
+    const tavtBase = Math.max(grossCap - residVal, 0);
+    const tavt = tavtBase * (tavtRate / 100);
 
     // Due at signing
     const dueAtSigning = baseMonthly + downPmt + tavt + upFees;
@@ -460,7 +466,8 @@ function calculate() {
     const totalMiles = miles * (term / 12);
     const costPerMile = totalMiles > 0 ? totalCost / totalMiles : 0;
     const totalRentCharges = monthlyRent * term;
-    const effectiveMonthly = term > 0 ? totalCost / term : 0;
+    // Effective monthly (matches Leasehackr): excludes lease-end fees
+    const effectiveMonthly = term > 0 ? (totalBase + downPmt + tavt + upFees) / term : 0;
 
     // Update hints
     $('discountHint').textContent = `= -${fmt(discAmt)}`;
@@ -492,6 +499,7 @@ function calculate() {
     $('rFirst').textContent = fmt(baseMonthly);
     $('rDown').textContent = fmt(downPmt);
     $('rTAVT').textContent = fmt(tavt);
+    $('rTAVTlbl').textContent = `TAVT (${tavtRate}% of ${fmt(tavtBase)})`;
     $('rUpFees').textContent = fmt(upFees);
     $('rDAS').textContent = fmt(dueAtSigning);
 
